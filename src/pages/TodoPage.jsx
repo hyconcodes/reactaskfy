@@ -1,12 +1,23 @@
 import { useEffect, useState } from 'react'
 import supabase from './../supabase-client';
 import { toast } from 'react-toastify';
+import NavBar from './../components/NavBar';
+import Footer from '../components/Footer';
+import { useNavigate } from 'react-router-dom';
 
 const TodoPage = () => {
+    useEffect(() => {
+        if (!localStorage.getItem('QTTY')) {
+            navigate('/')
+        }
+    }, [])
+    
     const [newTodo, setNewTodo] = useState('')
     const [todoList, setTodoList] = useState([])
     const [isLoading, setIsLoading] = useState(false)
+    const navigate = useNavigate()
 
+    const user = JSON.parse(localStorage.getItem('QTTY'));
     // FOR CREATING
     const handleSubmitTodo = async (e) => {
         e.preventDefault()
@@ -15,11 +26,14 @@ const TodoPage = () => {
         } else {
             try {
                 setIsLoading(true)
+                const user = JSON.parse(localStorage.getItem('QTTY'));
+                const uuid = user.id
                 const { data, error } = await supabase
                     .from('TodoList')
                     .insert({
                         'name': newTodo,
-                        'isCompleted': false
+                        'isCompleted': false,
+                        'user_id': uuid
                     })
                     .select()
                     .single();
@@ -44,11 +58,15 @@ const TodoPage = () => {
         fetchTodo()
     }, [])
     const fetchTodo = async () => {
+        const user = JSON.parse(localStorage.getItem('QTTY'));
+        const uuid = user.id
+        // console.log(uuid);
         setIsLoading(true)
         const { data, error } = await supabase
             .from('TodoList')
             .select('*')
             .order('createdAt', { ascending: false })
+            .eq('user_id', uuid)
         if (error) {
             setIsLoading(false)
             console.log('SUPABASE Error:', error);
@@ -98,6 +116,7 @@ const TodoPage = () => {
     }
     return (
         <>
+        <NavBar />
             <div className='container-fluid mb-5'>
                 <h1 className='mb-3 d-none'>Insert New Task</h1>
 
@@ -125,13 +144,13 @@ const TodoPage = () => {
                     </form>
                 </div>
 
-                <ul className='list-group shadow py-5 rounded'>
+                <ul className='list-group shadow-lg py-3 rounded'>
                     {
-                        isLoading && <div className="d-flex text-center">
-                            <h1 className='display-1 text-primary'>Loading...</h1>
+                        isLoading && <div className="d-flex text-center justify-content-center">
+                            <h1 className='fs-5 fst-italic fw-bold text-success'>Adding...</h1>
                         </div>
                     }
-                    {todoList.map((todo, index) => (
+                    {todoList.length > 0 ? todoList.map((todo, index) => (
                         <li key={todo.id} className='list-group-item d-flex justify-content-between align-items-center'>
                             <div className="d-flex justify-content-between align-items-center">
                                 <span className='badge bg-primary  me-3'>{index + 1}</span>
@@ -150,13 +169,13 @@ const TodoPage = () => {
                             </div>
                             <span className={`text-end ${todo.isCompleted && 'text-decoration-line-through text-success fw-bold'}`}>{todo.name}</span>
                         </li>
-                    ))}
+                    )) : (
+                        <p className='text-center text-success fw-bold fst-italic py-5'>Welcome back, {user?.email?.split('@')[0]}! Add a task below.</p>
+                    )}
                 </ul>
 
             </div>
-            <footer className='text-center'>
-                <p className='fst-italic text-primary-emphasis fw-bold'>Develop by Hycon</p>
-            </footer>
+            <Footer />
         </>
     )
 }
